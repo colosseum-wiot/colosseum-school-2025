@@ -1,7 +1,7 @@
 ---
 layout: post
 title: "Deploying OpenAirInterface (OAI) 5G RAN and Core-network in Colosseum"
-date: 2024-04-24
+date: 2025-06-02
 category: tutorials
 author: Florian Kaltenberger, Robert Schmidt, Sakthi Velumani, Rakesh Mundlamuri, Tien-Thinh Nguyen, Teodora Vladic, and many more
 short-description: How to deploy the latest version of OAI gNB, UE and 5G Core network in Colosseum and establish end-to-end connection
@@ -43,47 +43,42 @@ pandoc -t slidy --template ran.slidy -s README.md -o README.html
 
 There are ready-made images in Colosseum NAS which include OAI RAN and 5G Core Network. These images can be selected in the Colosseum reservation page under the `common` section. The images of interest are
 
- - RAN Image: `sakthi-oai-flexric`
- - Core-network Image: `sakthi-core-2024-tcpdump`
+ - RAN Image: `oai-2025w20-yg`
+ - Core-network Image: `oai-cn-2025w22-yg`
 
 Make a reservation with `n+2` SRNs out of which one Core-network image and `n+1` RAN Images where `n` is the number of UEs in the test scenario.
 
 When you make a reservation, please check the box Q1-Q2-Q3. This will guarantee that your nodes are synchronized.
 
-Once the reservation is active, you can login to the SRNs. The user for both images is 'root' and the password is `pass`.
+Once the reservation is active, you can login to the SRNs. The user for both images is 'root' and the password is `pass` for `oai-cn-2025w22-yg` and `ChangeMe` for `oai-2025w20-yg`.
 
 ---
 
 ## Run OAI 5G Core-network
-In SRN running `oai-5gcore-2024`
+In SRN running `oai-cn-2025w22-yg`
 ```
 cd oai-cn5g
 docker compose up -d
 ```
-This should start all the required docker containers for running the core-network.
+This should start all the required docker containers for running the core-network. 
 
 ---
 
 ## Run OAI gNB
-The image contains a python script to start the gNB and UE.
+In SRN running `oai-2025w20-yg`
 ```
 cd OAI-Colosseum
-python3 ran.py -t donor -m sa
+python3 ran.py -t donor -m sa --numa --if_freq 1000000000 --mcc 001 --mnc 01 --tac 1
 ```
-This will start the gNB process. If you get an error related to FPGA compatibility number mismatch, run the above command with `-f` option. This will flash the FPGA of the USRP with the version that matches your version of the UHD driver. This option is only needed once. The subsequent runs can be started without `-f`.
+This starts the gNB (`-t donor`) in standalone mode (`-m sa`). `--numa` tells the node to use the cores associated to the same NUMA node as the network card that connects the USRP. `--if_freq 1000000000` runs the whole setup at an intermediate frequency of 1GHz for better performance. `--mcc 001 --mnc 01 --tac 1` sets the Mobile Country Code, the Mobile Network Code and the Tracking Area Code. These parameters have to match the ones of the core network configuration.  
 
-You can also add the `--numa` option to the script to improve real-time performance. In this case you first need to set the environment variable
-```
-export USRP_NUMA_NODE=1
-python3 ran.py -t donor -m sa --numa
-```
 
 ---
 
 ## Start RF Scenario
 Now we need to tell the MCHEM (Massive CHannel EMulator) to set up a channel between all the nodes in the current reservation. This can be done from any of the SRNs in the reservation. The following command starts an RF scenario with 0 dB path loss. (Please note that losses due to hardware impairments are still present.)
 
-`colosseumcli rf start -c 10011`
+`colosseumcli rf start -c 10009`
 
 ---
 
@@ -91,8 +86,10 @@ Now we need to tell the MCHEM (Massive CHannel EMulator) to set up a channel bet
 Run the following commands.
 ```
 cd OAI-Colosseum
-python3 ran.py -t ue -m sa
+python3 ran.py -t ue -m sa --numa --if_freq 1000000000 --mcc 001 --mnc 01 --tac 1 --dnn oai
 ```
+This starts the UE (`-t ue`) in standalone mode (`-m sa`). `--numa` tells the node to use the cores associated to the same NUMA node as the network card that connects the USRP. `--if_freq 1000000000` runs the whole setup at an intermediate frequency of 1GHz for better performance. `--mcc 001 --mnc 01 --tac 1` sets the Mobile Country Code, the Mobile Network Code and the Tracking Area Code. `--dnn oai` is the Data Network Name. These parameters have to match the ones of the core network configuration.  
+
 If all goes well, the UE should connect to the gNB and the core network should have assigned an IP address to the UE. This can be verified by running `ifconfig` on the UE side and checking if the network interface named `oaitun_ue` has an IP assigned.
 
 Sometimes the UE may continuously fail the Random Access (RA) procedure and not proceed beyond that point. If this happens, try changing the `timing_advance` value in the `106` PRB section of the `conf.json` file (increase or decrease in steps of 5).
@@ -189,7 +186,7 @@ After starting the core network you will see a docker bridge network named "demo
 - Work happens in the `develop` branch
 - Usually one integration branch per week, tagged in the format `YYYY-wWW`, e.g., `2024.w12`
 - `master` for a known stable version - release v2.0.0
-- latest release: `v2.1.0` (February 2024)
+- latest release: `v2.2.0` (February 2025)
 
 ---	 
 
@@ -226,7 +223,7 @@ If you start from a fresh image you need first get the source code, install the 
 cd
 git clone https://gitlab.eurecom.fr/oai/openairinterface5g.git
 cd openairinterface5g/cmake_targets
-git checkout 2024.w15                        # tested tag
+git checkout 2025.w20                        # tested tag
 ./build_oai --ninja -I                       # install dependencies 
 ./build_oai --ninja --gNB --nrUE -w USRP -c  # compile gNB and nrUE
 ```
