@@ -103,11 +103,16 @@ The user can push more traffic over the RAN using tools such as `iperf3`, or equ
 On the core-network side, run `docker exec -it oai-ext-dn iperf3 -s`
 
 ### Downlink Traffic
-On the UE side, run `iperf3 -c 192.168.70.135 -B <ip of oaitun_ue> -b 50M -u -R`
+On the UE side, run `iperf3 -c 192.168.70.135 -B oaitun_ue1 -b 50M -u -R`
 
 ### Uplink Traffic
-On the UE side, run `iperf3 -c 192.168.70.135 -B <ip of oaitun_ue> -b 15M -u`
+On the UE side, run `iperf3 -c 192.168.70.135 -B oaitun_ue1 -b 15M -u`
 
+If you get an error like this `iperf3: error - unable to send control message: Bad file descriptor` do the following at the UE
+```
+ip route add 192.168.70.128/26 dev oaitun_ue1 proto kernel scope link src 10.0.0.2
+```
+and then call iperf3 without the option `-B oaitun_ue1`. If you run more than 1 UEs you have to replace `10.0.0.2` with the IP address of the corresponding UE.  
 ---
 
 
