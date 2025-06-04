@@ -113,6 +113,7 @@ If you get an error like this `iperf3: error - unable to send control message: B
 ip route add 192.168.70.128/26 dev oaitun_ue1 proto kernel scope link src 10.0.0.2
 ```
 and then call iperf3 without the option `-B oaitun_ue1`. If you run more than 1 UEs you have to replace `10.0.0.2` with the IP address of the corresponding UE.  
+
 ---
 
 
